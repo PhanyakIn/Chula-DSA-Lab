@@ -1,11 +1,15 @@
 import os
+import sys
+import time
+
+# ขยายขีดจำกัด Recursion สำหรับข้อมูลขนาดใหญ่
+sys.setrecursionlimit(200000)
 
 
 def max_profit_divide_and_conquer(prices, left, right):
 
     # Base Case: วันเดียว ไม่สามารถซื้อและขายคนละวันได้
     if left == right:
-        # ส่งค่ากลับ: (profit, buy_idx, sell_idx, min_idx_in_range, max_idx_in_range)
         return float("-inf"), -1, -1, left, right
 
     mid = (left + right) // 2
@@ -21,30 +25,31 @@ def max_profit_divide_and_conquer(prices, left, right):
     )
 
     # 3. หาคำตอบกรณี ซื้อฝั่งซ้าย (ราคาต่ำสุด) และ ขายฝั่งขวา (ราคาสูงสุด)
-    # หา index ของราคาน้อยที่สุดในฝั่งซ้าย
     cross_buy = l_min_idx
-    # หา index ของราคามากที่สุดในฝั่งขวา
     cross_sell = r_max_idx
     cross_profit = prices[cross_sell] - prices[cross_buy]
 
-    # คำนวณ min_idx และ max_idx ของช่วง [left, right] เพื่อส่งต่อขึ้นไป
-    current_min_idx = (
-        l_min_idx if prices[l_min_idx] <= prices[r_min_idx] else r_min_idx
-    )
-    current_max_idx = (
-        r_max_idx if prices[r_max_idx] >= prices[l_max_idx] else l_max_idx
-    )
+    # --- แก้ไขจุดนี้: หา min_idx และ max_idx ของช่วง [left, right] ที่ถูกต้อง ---
+    if prices[l_min_idx] <= prices[r_min_idx]:
+        current_min_idx = l_min_idx
+    else:
+        current_min_idx = r_min_idx
+
+    if prices[l_max_idx] >= prices[r_max_idx]:
+        current_max_idx = l_max_idx
+    else:
+        current_max_idx = r_max_idx
 
     # เปรียบเทียบเลือกผลตอบแทน (กำไร) ที่มากที่สุด
     best_profit = l_profit
     best_buy = l_buy
     best_sell = l_sell
-
+    
     if r_profit > best_profit:
         best_profit = r_profit
         best_buy = r_buy
         best_sell = r_sell
-
+        
     if cross_profit > best_profit:
         best_profit = cross_profit
         best_buy = cross_buy
@@ -54,16 +59,18 @@ def max_profit_divide_and_conquer(prices, left, right):
 
 
 def main():
-    # เปิดอ่านไฟล์ testcase.txt ในโฟลเดอร์เดียวกับสคริปต์ (ไม่ต้องพิมพ์ผ่าน Terminal)
-    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "testcase.txt")
+    file_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "testcase.txt"
+    )
     try:
         with open(file_path, "r", encoding="utf-8") as file:
             input_data = file.read().split()
     except FileNotFoundError:
-        print(f"Error: หาไฟล์ '{file_path}' ไม่เจอ โปรดตรวจสอบว่าไฟล์อยู่ในโฟลเดอร์ Lab8")
+        print(
+            f"Error: หาไฟล์ '{file_path}' ไม่เจอ โปรดตรวจสอบว่าไฟล์อยู่ในโฟลเดอร์ Lab8"
+        )
         return
 
-    # อ่านข้อมูลทั้งหมดเข้ามารวดเดียว รองรับ N ขนาดใหญ่ได้สบาย
     if not input_data:
         return
 
@@ -73,24 +80,32 @@ def main():
     if n < 2:
         return
 
+    # เริ่มจับเวลา
+    start_time = time.perf_counter()
+
     # เรียกใช้ Divide and Conquer
     profit, buy_idx, sell_idx, _, _ = max_profit_divide_and_conquer(
         prices, 0, n - 1
     )
 
-    buy_day = buy_idx + 1  # เปลี่ยน index เป็นวันที่ (1-based)
-    sell_day = sell_idx + 1  # เปลี่ยน index เป็นวันที่ (1-based)
+    # สิ้นสุดการจับเวลา
+    end_time = time.perf_counter()
+    execution_time_ms = (end_time - start_time) * 1000
+
+    buy_day = buy_idx + 1  # เปลี่ยน index เป็นวันที่ (1-based)[cite: 1]
+    sell_day = sell_idx + 1  # เปลี่ยน index เป็นวันที่ (1-based)[cite: 1]
     buy_price = prices[buy_idx]
     sell_price = prices[sell_idx]
-    days_held = sell_day - buy_day  # จำนวนวันที่ถือครอง
+    days_held = sell_day - buy_day  # จำนวนวันที่ถือครอง[cite: 1]
 
     # แสดงผลตามรูปแบบโจทย์
-    print(buy_day)
-    print(f"{buy_price:.2f}")
-    print(sell_day)
-    print(f"{sell_price:.2f}")
-    print(f"{profit:.2f}")
-    print(days_held)
+    print(f"วันที่ควรซื้อคือ : {buy_day}")
+    print(f"ราคาซื้อคือ : {buy_price:.2f}")
+    print(f"วันที่ควรขายคือ : {sell_day}")
+    print(f"ราคาขายคือ : {sell_price:.2f}")
+    print(f"กำไรสูงสุดคือ : {profit:.2f}")
+    print(f"ถือเงินไว้นาน : {days_held}")
+    print(f"Run Time (Divide & Conquer): {execution_time_ms:.4f} ms")
 
 
 if __name__ == "__main__":
