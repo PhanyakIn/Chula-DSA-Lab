@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>Polygon Triangulation DP Visualizer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 { font-size: 1.5rem; margin-bottom: 5px; }
+        .container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .card {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        canvas {
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 8px;
+        }
+        table {
+            border-collapse: collapse;
+            margin: 0 auto;
+        }
+        th, td {
+            border: 1px solid #475569;
+            width: 45px;
+            height: 35px;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+        th { background: #334155; }
+        td.highlight { background: #3b82f6; color: white; font-weight: bold; }
+        td.active-cell { background: #10b981; color: white; font-weight: bold; }
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        button:hover { background: #2563eb; }
+        button:disabled { background: #475569; cursor: not-allowed; }
+        .info-box {
+            margin-top: 15px;
+            text-align: left;
+            background: #0f172a;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            min-height: 50px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Polygon Triangulation DP Visualizer</h1>
+    <p style="color: #94a3b8; font-size: 0.9rem;">กดปุ่ม Next เพื่อดูการทำงานทีละสเต็ปของลูป Gap, i, j และ k</p>
+
+    <div class="container">
+        <!-- ฝั่งซ้าย: Canvas วาดรูป Polygon -->
+        <div class="card">
+            <h3>Visual Polygon</h3>
+            <canvas id="canvas" width="300" height="300"></canvas>
+            <div class="info-box" id="infoText">กดปุ่ม Start หรือ Next เพื่อเริ่มจำลอง</div>
+            <div class="controls">
+                <button id="prevBtn" onclick="prevStep()" disabled>Previous</button>
+                <button id="nextBtn" onclick="nextStep()">Next Step</button>
+                <button onclick="resetSim()" style="background: #ef4444;">Reset</button>
+            </div>
+        </div>
+
+        <!-- ฝั่งขวา: ตาราง DP Table -->
+        <div class="card">
+            <h3>DP Table dp[i][j]</h3>
+            <div id="tableContainer" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+<script>
+    // ข้อมูลพิกัดจุดตัวอย่างจากโจทย์ (ปรับสเกลให้อยู่ใน Canvas ขนาด 300x300)
+    const points = [
+        {x: 50, y: 220, label: "P0(0,0)"},
+        {x: 150, y: 220, label: "P1(1,0)"},
+        {x: 250, y: 150, label: "P2(2,1)"},
+        {x: 150, y: 80,  label: "P3(1,2)"},
+        {x: 50,  y: 80,  label: "P4(0,2)"}
+    ];
+
+    const rawPoints = [[0,0], [1,0], [2,1], [1,2], [0,2]];
+    const n = rawPoints.length;
+
+    function dist(p1, p2) {
+        return Math.hypot(p1[0] - p2[0], p1[1] - p2[1]);
+    }
+    function perimeter(i, k, j) {
+        return dist(rawPoints[i], rawPoints[k]) + 
+               dist(rawPoints[k], rawPoints[j]) + 
+               dist(rawPoints[j], rawPoints[i]);
+    }
+
+    // สร้างบันทึกขั้นตอนทั้งหมด (Steps Recorder) เพื่อให้กดเดินหน้า-ถอยหลังได้
+    let steps = [];
+    let currentStepIndex = -1;
+    let dpTable = Array(n).fill(0).map(() => Array(n).fill(0));
+
+    function generateSteps() {
+        steps = [];
+        let tempDp = Array(n).fill(0).map(() => Array(n).fill(0));
+
+        steps.push({
+            gap: 0, i: -1, j: -1, k: -1,
+            table: JSON.parse(JSON.stringify(tempDp)),
+            msg: "เริ่มต้นสร้างตาราง DP ขนาด 5x5 ค่าเริ่มต้นเป็น 0"
+        });
+
+        for (let gap = 2; gap < n; gap++) {
+            for (let i = 0; i < n - gap; i++) {
+                let j = i + gap;
+                tempDp[i][j] = Infinity;
+                
+                steps.push({
+                    gap, i, j, k: -1,
+                    table: JSON.parse(JSON.stringify(tempDp)),
+                    msg: `รอบ Gap = ${gap} | กำลังมองช่วงจุด i=${i} ถึง j=${j}`
+                });
+
+                for (let k = i + 1; k < j; k++) {
+                    let cost = tempDp[i][k] + tempDp[k][j] + perimeter(i, k, j);
+                    let isBest = false;
+                    if (cost < tempDp[i][j]) {
+                        tempDp[i][j] = cost;
+                        isBest = true;
+                    }
+
+                    steps.push({
+                        gap, i, j, k,
+                        table: JSON.parse(JSON.stringify(tempDp)),
+                        activeTriangle: [i, k, j],
+                        msg: `  -> ลองจุดตัด k=${k} | สามเหลี่ยม P${i}-P${k}-P${j} | Cost คำนวณได้ = ${cost.toFixed(2)} ${isBest ? '(ค่าน้อยที่สุดตอนนี้ อัปเดตลงตาราง!)' : ''}`
+                    });
+                }
+            }
+        }
+        steps.push({
+            gap: -1, i: -1, j: -1, k: -1,
+            table: JSON.parse(JSON.stringify(tempDp)),
+            msg: `🎉 คำนวณเสร็จสิ้น! ต้นทุนต่ำสุดรวม (Minimum Cost) คือ dp[0][${n-1}] = ${tempDp[0][n-1].toFixed(4)}`
+        });
+    }
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    function draw(step) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // วาดเส้นโครง Polygon รอบนอก
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        points.forEach((p, idx) => {
+            if (idx === 0) ctx.moveTo(p.x, p.y);
+            else ctx.lineTo(p.x, p.y);
+        });
+        ctx.closePath();
+        ctx.stroke();
+
+        // ถ้ามีสามเหลี่ยมที่กำลังพิจารณา (Active Triangle จากจุด i, k, j) ให้วาดไฮไลต์เส้นตัด
+        if (step && step.activeTriangle) {
+            const [i, k, j] = step.activeTriangle;
+            ctx.fillStyle = 'rgba(59, 130, 246, 0.15)';
+            ctx.beginPath();
+            ctx.moveTo(points[i].x, points[i].y);
+            ctx.lineTo(points[k].x, points[k].y);
+            ctx.lineTo(points[j].x, points[j].y);
+            ctx.closePath();
+            ctx.fill();
+
+            // วาดเส้นทแยงมุมสีเขียว/ฟ้า
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 2;
+            
+            // เส้นจาก i ไป k
+            ctx.beginPath(); ctx.moveTo(points[i].x, points[i].y); ctx.lineTo(points[k].x, points[k].y); ctx.stroke();
+            // เส้นจาก k ไป j
+            ctx.beginPath(); ctx.moveTo(points[k].x, points[k].y); ctx.lineTo(points[j].x, points[j].y); ctx.stroke();
+        }
+
+        // วาดจุด Vertex แต่ละจุด
+        points.forEach((p, idx) => {
+            ctx.fillStyle = '#3b82f6';
+            if (step && step.activeTriangle && step.activeTriangle.includes(idx)) {
+                ctx.fillStyle = '#10b981'; // ไฮไลต์จุดที่กำลังใช้คำนวณ
+            }
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 7, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = '12px sans-serif';
+            ctx.fillText(`P${idx}`, p.x - 10, p.y - 12);
+        });
+
+        // อัปเดตข้อความอธิบาย
+        document.getElementById('infoText').innerText = step ? step.msg : "พร้อมเริ่ม";
+
+        // สร้างตาราง HTML DP Table
+        renderTable(step);
+    }
+
+    function renderTable(step) {
+        let currentTable = step ? step.table : dpTable;
+        let html = '<table><tr><th>i\\j</th>';
+        for(let j=0; j<n; j++) html += `<th>${j}</th>`;
+        html += '</tr>';
+
+        for(let i=0; i<n; i++) {
+            html += `<tr><th>${i}</th>`;
+            for(let j=0; j<n; j++) {
+                let val = currentTable[i][j];
+                let displayVal = val === 0 ? '0.0' : (val === Infinity ? 'inf' : val.toFixed(1));
+                let cssClass = '';
+                
+                if (step && step.i === i && step.j === j) cssClass = 'active-cell';
+                else if (val > 0 && val !== Infinity) cssClass = 'highlight';
+
+                html += `<td class="${cssClass}">${displayVal}</td>`;
+            }
+            html += '</tr>';
+        }
+        html += '</table>';
+        document.getElementById('tableContainer').innerHTML = html;
+    }
+
+    function nextStep() {
+        if (currentStepIndex < steps.length - 1) {
+            currentStepIndex++;
+            draw(steps[currentStepIndex]);
+        }
+        updateButtons();
+    }
+
+    function prevStep() {
+        if (currentStepIndex > 0) {
+            currentStepIndex--;
+            draw(steps[currentStepIndex]);
+        }
+        updateButtons();
+    }
+
+    function resetSim() {
+        currentStepIndex = -1;
+        generateSteps();
+        nextStep();
+    }
+
+    function updateButtons() {
+        document.getElementById('prevBtn').disabled = currentStepIndex <= 0;
+        document.getElementById('nextBtn').disabled = currentStepIndex >= steps.length - 1;
+    }
+
+    // เริ่มต้นระบบครั้งแรก
+    generateSteps();
+    draw(steps[0]);
+</script>
+
+</body>
+</html>
