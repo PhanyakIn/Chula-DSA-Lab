@@ -10,7 +10,7 @@ def max_profit_divide_and_conquer(prices, left, right):
 
     # Base Case: วันเดียว ไม่สามารถซื้อและขายคนละวันได้
     if left == right:
-        return float("-inf"), -1, -1, left, right
+        return 0.0, left, left, left, left
 
     mid = (left + right) // 2
 
