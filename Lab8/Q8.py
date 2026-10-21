@@ -98,12 +98,15 @@ def main():
     sell_price = prices[sell_idx]
     days_held = sell_day - buy_day  # จำนวนวันที่ถือครอง[cite: 1]
 
-    # แสดงผลตามรูปแบบโจทย์
+    min_possible_profit = min(prices[sell] - prices[buy] for buy in range(n) for sell in range(buy + 1, n)) if n >= 2 else 0.0
+
+    # แสดงผลตามรูปแบบโจทย์ + เพิ่มกำไรต่ำสุด
     print(f"วันที่ควรซื้อคือ : {buy_day}")
     print(f"ราคาซื้อคือ : {buy_price:.2f}")
     print(f"วันที่ควรขายคือ : {sell_day}")
     print(f"ราคาขายคือ : {sell_price:.2f}")
     print(f"กำไรสูงสุดคือ : {profit:.2f}")
+    print(f"กำไรต่ำสุดคือ (ขาดทุนสูงสุด) : {min_possible_profit:.2f}")
     print(f"ถือเงินไว้นาน : {days_held}")
     print(f"Run Time (Divide & Conquer): {execution_time_ms:.4f} ms")
 
