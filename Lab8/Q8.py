@@ -98,7 +98,23 @@ def main():
     sell_price = prices[sell_idx]
     days_held = sell_day - buy_day  # จำนวนวันที่ถือครอง[cite: 1]
 
-    min_possible_profit = min(prices[sell] - prices[buy] for buy in range(n) for sell in range(buy + 1, n)) if n >= 2 else 0.0
+    min_possible_profit = float("inf")
+    worst_buy_idx = 0
+    worst_sell_idx = 0
+
+    if n >= 2:
+        for buy in range(n):
+            for sell in range(buy + 1, n):
+                profit_val = prices[sell] - prices[buy]
+                if profit_val < min_possible_profit:
+                    min_possible_profit = profit_val
+                    worst_buy_idx = buy
+                    worst_sell_idx = sell
+    else:
+        min_possible_profit = 0.0
+
+    worst_buy_day = worst_buy_idx + 1
+    worst_sell_day = worst_sell_idx + 1
 
     # แสดงผลตามรูปแบบโจทย์ + เพิ่มกำไรต่ำสุด
     print(f"วันที่ควรซื้อคือ : {buy_day}")
@@ -109,6 +125,9 @@ def main():
     print(f"กำไรต่ำสุดคือ (ขาดทุนสูงสุด) : {min_possible_profit:.2f}")
     print(f"ถือเงินไว้นาน : {days_held}")
     print(f"Run Time (Divide & Conquer): {execution_time_ms:.4f} ms")
+
+    print(worst_buy_day)
+    print(worst_sell_day)
 
 
 if __name__ == "__main__":
