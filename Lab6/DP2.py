@@ -3,7 +3,7 @@
 # 2. Minimum Coin Change Problem & 2D Lookup Table
 # ==============================================================================
 INF = float('inf')
-def min_coin_change_dp_all_solutions(file_path, max_table_amount=50, show_table=False):
+def min_coin_change_dp_all_solutions(file_path, max_table_amount=250, show_table=True):
     """
     1. คำนวณจำนวนเหรียญขั้นต่ำด้วย 2D DP Table
     2. Backtrack หา Optimal Solutions ทั้งหมด
