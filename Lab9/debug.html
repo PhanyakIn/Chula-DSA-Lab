@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab9 Debugger — ไล่โค้ด Q9.py ทีละบรรทัด</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="debug.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="header-title">Lab9 Debugger — ไล่โค้ด Q9.py ทีละบรรทัด</h1>
+            <p class="header-subtitle">กด Next เพื่อดูการทำงานของ Kosaraju's Algorithm ทีละขั้น พร้อมภาพกราฟและค่าตัวแปรที่เปลี่ยนไป</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="controls">
+            <button id="btnReset" class="btn btn-ghost">⏮ เริ่มใหม่</button>
+            <button id="btnPrev" class="btn btn-ghost">◀ Prev</button>
+            <button id="btnNext" class="btn btn-primary">Next ▶</button>
+            <button id="btnPlay" class="btn btn-ghost">▶ เล่นอัตโนมัติ</button>
+            <span id="stepCount" class="step-count">สเต็ป 0 / 0</span>
+        </div>
+
+        <div class="desc-panel card">
+            <span class="desc-label">สิ่งที่เกิดขึ้นในสเต็ปนี้</span>
+            <p id="stepDesc">กด Next เพื่อเริ่ม</p>
+        </div>
+
+        <div class="layout">
+            <section class="code-panel card">
+                <h2 class="panel-title">Q9.py</h2>
+                <pre id="codeSrc" hidden>import sys
+
+# เพิ่มขีดจำกัดของ recursion เพื่อรองรับกราฟที่มีขนาดใหญ่หรือลึกมาก
+sys.setrecursionlimit(200000)
+
+def solve():
+    # อ่านข้อมูลจากไฟล์ testcase.txt
+    try:
+        with open('Lab9/testcase.txt', 'r') as f:
+            input_data = f.read().split()
+    except FileNotFoundError:
+        print("ไม่พบไฟล์ testcase.txt")
+        return
+
+    if not input_data:
+        return
+
+    n = int(input_data[0]) # จำนวนเกาะ
+    m = int(input_data[1]) # จำนวนถนน
+
+    # สร้าง Adjacency List สำหรับกราฟปกติและกราฟกลับทิศทาง
+    adj = [[] for _ in range(n + 1)]
+    rev_adj = [[] for _ in range(n + 1)]
+
+    # อ่านข้อมูลถนนเชื่อมต่อแบบทิศทางเดียว
+    idx = 2
+    for _ in range(m):
+        u = int(input_data[idx])
+        v = int(input_data[idx+1])
+        adj[u].append(v)
+        rev_adj[v].append(u)
+        idx += 2
+
+    visited = [False] * (n + 1)
+    order = []
+
+    # ขั้นตอนที่ 1: DFS เพื่อหาลำดับการทำงาน (Finishing time)
+    def dfs1(u):
+        visited[u] = True
+        for v in adj[u]:
+            if not visited[v]:
+                dfs1(v)
+        order.append(u)
+
+    # รัน DFS รอบแรกสำหรับทุกๆ โหนดที่ยังไม่ได้เยี่ยมชม
+    for i in range(1, n + 1):
+        if not visited[i]:
+            dfs1(i)
+
+    # รีเซ็ตค่าสถานะการเยี่ยมชมสำหรับ DFS รอบที่ 2
+    visited = [False] * (n + 1)
+
+    # ขั้นตอนที่ 2: DFS บนกราฟกลับทิศทางเพื่อหาขนาดของ SCC
+    def dfs2(u):
+        count = 1
+        visited[u] = True
+        for v in rev_adj[u]:
+            if not visited[v]:
+                count += dfs2(v)
+        return count
+
+    max_scc_size = 0
+
+    # รัน DFS รอบสองตามลำดับย้อนหลังของ order
+    for i in range(n - 1, -1, -1):
+        u = order[i]
+        if not visited[u]:
+            # นับจำนวนเกาะใน SCC กลุ่มนี้และอัปเดตค่าสูงสุด
+            current_scc_size = dfs2(u)
+            if current_scc_size > max_scc_size:
+                max_scc_size = current_scc_size
+
+    # พิมพ์คำตอบ
+    print("จำนวนเกาะสูงสุดที่เดินทางผ่านได้ :", max_scc_size)
+
+if __name__ == '__main__':
+    solve()
+</pre>
+                <div id="codeLines" class="code-lines"></div>
+            </section>
+
+            <div class="right-col">
+                <section class="card graph-card">
+                    <h2 class="panel-title">ภาพกราฟ <span class="phase-badge" id="phaseBadge">เริ่มต้น</span></h2>
+                    <svg id="graph" viewBox="0 0 560 440" role="img" aria-label="กราฟตัวอย่าง"></svg>
+                    <div class="legend">
+                        <span class="legend-item"><span class="dot dot-normal"></span> ยังไม่เยี่ยมชม</span>
+                        <span class="legend-item"><span class="dot dot-dfs1"></span> DFS รอบ 1 (visited)</span>
+                        <span class="legend-item"><span class="dot dot-scc"></span> SCC ที่พบ (DFS รอบ 2)</span>
+                        <span class="legend-item"><span class="dot dot-current"></span> กำลังทำงานอยู่</span>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <h2 class="panel-title">ค่าตัวแปรปัจจุบัน</h2>
+                    <div class="meta-row">
+                        <span class="meta-label">n (เกาะ)</span><span class="meta-value" id="varN">-</span>
+                        <span class="meta-label">m (ถนน)</span><span class="meta-value" id="varM">-</span>
+                        <span class="meta-label">SCC root</span><span class="meta-value" id="varRoot">-</span>
+                        <span class="meta-label">ขนาด SCC ปัจจุบัน</span><span class="meta-value" id="varSize">-</span>
+                        <span class="meta-label">max_scc_size</span><span class="meta-value big" id="varMax">0</span>
+                    </div>
+                </section>
+
+                <div class="list-grid">
+                    <section class="card">
+                        <h2 class="panel-title">adj (กราฟเดิม)</h2>
+                        <div id="adjList" class="adj-list"></div>
+                    </section>
+                    <section class="card">
+                        <h2 class="panel-title">rev_adj (กราฟกลับทิศ)</h2>
+                        <div id="revList" class="adj-list"></div>
+                    </section>
+                </div>
+
+                <div class="chip-grid">
+                    <section class="card">
+                        <h2 class="panel-title">visited[]</h2>
+                        <div id="visitedRow" class="chip-row"></div>
+                    </section>
+                    <section class="card">
+                        <h2 class="panel-title">order[] (finishing time)</h2>
+                        <div id="orderRow" class="chip-row"><span class="empty">ยังว่าง</span></div>
+                    </section>
+                    <section class="card">
+                        <h2 class="panel-title">call stack (recursion)</h2>
+                        <div id="stackRow" class="chip-row"><span class="empty">ว่าง</span></div>
+                    </section>
+                </div>
+
+                <div id="resultBox" class="result-box hidden">
+                    <p class="result-text">จำนวนเกาะสูงสุดที่เดินทางผ่านได้ : <strong id="resultVal">-</strong></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>ใช้ปุ่ม ← / → บนคีย์บอร์ดเพื่อย้อน/ไปสเต็ปถัดไปได้ด้วย</p>
+    </footer>
+
+    <script src="debug.js" defer></script>
+</body>
+</html>
