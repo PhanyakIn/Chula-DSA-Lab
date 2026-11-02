@@ -71,7 +71,11 @@ def solve():
                 max_scc_size = current_scc_size
                 
     # พิมพ์คำตอบ
+<<<<<<< Updated upstream
     print("จำนวนเกาะสูงสุดที่เดินทางผ่านได้ :", max_scc_size)
+=======
+    print("จำนวนเกาะสูงสุดที่เดินทางผ่านได้:", max_scc_size)
+>>>>>>> Stashed changes
 
 if __name__ == '__main__':
     solve()
