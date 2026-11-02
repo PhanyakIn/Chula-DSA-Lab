@@ -12,6 +12,34 @@ def get_distance(p1, p2):
 def get_perimeter(p1, p2, p3):
     return get_distance(p1, p2) + get_distance(p2, p3) + get_distance(p3, p1)
 
+def print_dp_table(dp, n):
+    """
+    ฟังก์ชันสำหรับแสดงตาราง 2D DP ของ Polygon Triangulation
+    """
+    print("\n" + "=" * 60)
+    print("=== 2D Dynamic Programming Table (dp[i][j]) ===")
+    print("=" * 60)
+    
+    # สร้างหัวตารางแสดง Index ของคอลัมน์ j
+    header = f"{'i \\ j':<6}" + "".join([f"{j:>9}" for j in range(n)])
+    print(header)
+    print("-" * len(header))
+    
+    # วนลูปพิมพ์แต่ละแถว i
+    for i in range(n):
+        row_str = f"{i:<6}"
+        for j in range(n):
+            val = dp[i][j]
+            if val == float('inf'):
+                val_str = "INF"
+            elif val == 0.0:
+                val_str = "0.0"
+            else:
+                val_str = f"{val:.1f}"  # จัดรูปแบบทศนิยม 1 ตำแหน่งให้อ่านง่ายในตาราง
+            row_str += f"{val_str:>9}"
+        print(row_str)
+    print("=" * 60)
+
 # ==========================================
 # ส่วนที่ 2: โปรแกรมหลัก (Dynamic Programming)
 # ==========================================
@@ -36,6 +64,17 @@ def main():
         points.append((x, y))
         idx += 2
 
+    # ==========================================
+    # เพิ่มส่วนนี้: เรียงลำดับจุดตามมุม Polar Angle รอบจุดศูนย์กลาง
+    # ==========================================
+    # 4.1 หาจุดศูนย์กลาง (Centroid) ของจุดทั้งหมด
+    cx = sum(p[0] for p in points) / n
+    cy = sum(p[1] for p in points) / n
+
+    # 4.2 เรียงลำดับจุดตามมุม (math.atan2) ทวนเข็มนาฬิกา
+    points.sort(key=lambda p: math.atan2(p[1] - cy, p[0] - cx))
+
+    
     # 5. สร้างตาราง DP ขนาด n x n (ใส่ค่าเริ่มต้นเป็น 0.0)
     # dp[i][j] คือตัวแปรที่จะจดจำว่า "ชิ้นส่วนจากจุด i ถึง j มีต้นทุนการตัดต่ำสุดเท่าไหร่"
     dp = [[0.0 for _ in range(n)] for _ in range(n)]
@@ -56,8 +95,10 @@ def main():
                     dp[i][j] = current_cost
 
     # 8. แสดงผลลัพธ์คำตอบสุดท้ายที่ทศนิยม 4 ตำแหน่ง
-    print(f"{dp[0][n-1]:.4f}")
-
+    print()
+    print(f"Answer = {dp[0][n-1]:.4f}")
+    print()
+    print_dp_table(dp, n)
 # สั่งให้โปรแกรมเริ่มทำงาน
 if __name__ == "__main__":
     main()
