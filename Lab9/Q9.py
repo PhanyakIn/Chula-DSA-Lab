@@ -71,7 +71,7 @@ def solve():
                 max_scc_size = current_scc_size
                 
     # พิมพ์คำตอบ
-    print("จำนวนเกาะสูงสุดที่เดินทางผ่านได้:", max_scc_size)
+    print("จำนวนเกาะสูงสุดที่เดินทางผ่านได้ 55555:", max_scc_size)
 
 if __name__ == '__main__':
     solve()
