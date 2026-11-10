@@ -1,15 +1,20 @@
 import sys
+import os
 
 # เพิ่มขีดจำกัดของ recursion เพื่อรองรับกราฟที่มีขนาดใหญ่หรือลึกมาก
 sys.setrecursionlimit(200000)
 
+# หา path ของ testcase.txt โดยยึดตำแหน่งของไฟล์นี้เป็นหลัก (รันจากที่ไหนก็ได้)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+TESTCASE_PATH = os.path.join(SCRIPT_DIR, 'testcase.txt')
+
 def solve():
     # 1. อ่านข้อมูลจากไฟล์ testcase.txt
     try:
-        with open('Lab9/testcase.txt', 'r') as f:
+        with open(TESTCASE_PATH, 'r') as f:
             input_data = f.read().split()
     except FileNotFoundError:
-        print("ไม่พบไฟล์ Lab9/testcase.txt")
+        print("ไม่พบไฟล์ testcase.txt ที่อยู่ข้างสคริปต์นี้")
         return
         
     if not input_data:
