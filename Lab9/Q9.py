@@ -1,43 +1,40 @@
 import sys
 import os
 
-# เพิ่มขีดจำกัดของ recursion เพื่อรองรับกราฟที่มีขนาดใหญ่หรือลึกมาก
 sys.setrecursionlimit(200000)
 
-# หา path ของ testcase.txt โดยยึดตำแหน่งของไฟล์นี้เป็นหลัก (รันจากที่ไหนก็ได้)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 TESTCASE_PATH = os.path.join(SCRIPT_DIR, 'testcase.txt')
 
 def solve():
-    # 1. อ่านข้อมูลจากไฟล์ testcase.txt
     try:
         with open(TESTCASE_PATH, 'r') as f:
             input_data = f.read().split()
     except FileNotFoundError:
-        print("ไม่พบไฟล์ testcase.txt ที่อยู่ข้างสคริปต์นี้")
+        print("ไม่พบไฟล์ testcase.txt")
         return
         
     if not input_data:
         return
         
-    n = int(input_data[0])  # จำนวนเกาะทั้งหมด
-    m = int(input_data[1])  # จำนวนถนนทั้งหมด
+    n = int(input_data[0])
+    m = int(input_data[1])
     
-    # สร้าง Adjacency List สำหรับกราฟปกติ (adj) และกราฟกลับทิศทาง (rev_adj)
     adj = [[] for _ in range(n + 1)]
     rev_adj = [[] for _ in range(n + 1)]
+    edges = []
     
-    # อ่านข้อมูลถนนเชื่อมต่อแบบทิศทางเดียว (u -> v)
     idx = 2
     for _ in range(m):
         u = int(input_data[idx])
         v = int(input_data[idx+1])
         adj[u].append(v)
         rev_adj[v].append(u)
+        edges.append((u, v))
         idx += 2
-
+        
     # -------------------------------------------------------------
-    # ขั้นตอนที่ 1: DFS บนกราฟปกติ เพื่อหา Finishing Time (Order)
+    # Step 1: Kosaraju's Algorithm หา SCC ทั้งหมด
     # -------------------------------------------------------------
     visited = [False] * (n + 1)
     order = []
@@ -47,27 +44,22 @@ def solve():
         for v in adj[u]:
             if not visited[v]:
                 dfs1(v)
-        order.append(u)  # เก็บโหนดตามลำดับที่ทำงานเสร็จ
+        order.append(u)
         
     for i in range(1, n + 1):
         if not visited[i]:
             dfs1(i)
             
-    # -------------------------------------------------------------
-    # ขั้นตอนที่ 2: DFS บนกราฟกลับทิศทาง เพื่อดึงสมาชิก SCC แต่ละกลุ่ม
-    # -------------------------------------------------------------
     visited = [False] * (n + 1)
     
     def dfs2(u, component):
         visited[u] = True
-        component.append(u)  # สะสมรายชื่อเกาะใน SCC กลุ่มปัจจุบัน
+        component.append(u)
         for v in rev_adj[u]:
             if not visited[v]:
                 dfs2(v, component)
 
     all_sccs = []
-    
-    # รัน DFS รอบสองตามลำดับย้อนหลังของ order
     for i in range(n - 1, -1, -1):
         u = order[i]
         if not visited[u]:
@@ -75,54 +67,65 @@ def solve():
             dfs2(u, component)
             all_sccs.append(component)
 
-    # -------------------------------------------------------------
-    # ส่วนที่ 1: แสดงผล SCC ทุกกลุ่มที่พบ (ทุกรูปแบบทางผ่าน)
-    # -------------------------------------------------------------
-    print(f"==================================================")
-    print(f"           พบ SCC ทั้งหมด {len(all_sccs)} กลุ่ม")
-    print(f"==================================================")
-    
-    best_scc = None
-    best_size = -1
-    best_edges = float('inf')
-
-    for idx_scc, scc in enumerate(all_sccs, 1):
-        scc_set = set(scc)  # แปลงเป็น set เพื่อให้ตรวจสอบรวดเร็ว
-        size = len(scc)
-        
-        # นับจำนวนถนน (Edge) จริงที่มีอยู่ภายใน SCC นี้
-        actual_edges = 0
-        for u in scc:
-            for v in adj[u]:
-                if v in scc_set:  # นับเฉพาะถนนที่ปลายทางยังอยู่ใน SCC เดียวกัน
-                    actual_edges += 1
-
-        min_required_edges = size if size > 1 else 0
-        
-        print(f"\n[SCC กลุ่มที่ {idx_scc}]")
-        print(f"  • รายชื่อเกาะในกลุ่ม: {scc}")
-        print(f"  • จำนวนเกาะ (Size): {size}")
-        print(f"  • จำนวนถนนจริงภายในกลุ่ม: {actual_edges} เส้น")
-        print(f"  • จำนวนถนนน้อยที่สุดในทฤษฎี: {min_required_edges} เส้น")
-
-        # คัดเลือกตัวที่ดีที่สุด (ขนาดใหญ่สุด -> ถ้านเท่ากันเอาถนนน้อยสุด)
-        if (size > best_size) or (size == best_size and actual_edges < best_edges):
-            best_size = size
-            best_edges = actual_edges
-            best_scc = scc
-
-    # -------------------------------------------------------------
-    # ส่วนที่ 2: สรุปเฉพาะ SCC ที่ใหญ่ที่สุดและมีถนนน้อยที่สุด
-    # -------------------------------------------------------------
-    print("\n==================================================")
-    print("   สรุป: SCC ที่ใหญ่ที่สุดที่มีจำนวนถนนน้อยที่สุด")
+    num_sccs = len(all_sccs)
     print("==================================================")
-    if best_scc:
-        min_req = best_size if best_size > 1 else 0
-        print(f"  • รายชื่อเกาะในกลุ่ม: {best_scc}")
-        print(f"  • จำนวนเกาะสูงสุด (Size): {best_size}")
-        print(f"  • จำนวนถนนจริงภายในกลุ่ม: {best_edges} เส้น")
-        print(f"  • จำนวนถนนน้อยที่สุดในทฤษฎี: {min_req} เส้น")
+    print(f"           พบ SCC ทั้งหมด {num_sccs} กลุ่ม")
+    print("==================================================")
+
+    # หากราฟเดิมเป็น 1 SCC อยู่แล้ว ไม่ต้องเพิ่มถนน
+    if num_sccs == 1:
+        print("\nกราฟนี้เป็น Strongly Connected Component เดียวกันทั้งหมดอยู่แล้ว!")
+        print("จำนวนถนนที่ต้องสร้างเพิ่ม: 0 เส้น")
+        return
+
+    # -------------------------------------------------------------
+    # Step 2: สร้าง Condensed Graph และหา In-degree / Out-degree
+    # -------------------------------------------------------------
+    node_to_scc = {}
+    for scc_idx, scc in enumerate(all_sccs, 1):
+        for u in scc:
+            node_to_scc[u] = scc_idx
+
+    in_degree = [0] * (num_sccs + 1)
+    out_degree = [0] * (num_sccs + 1)
+    condensed_adj = [set() for _ in range(num_sccs + 1)]
+
+    for u, v in edges:
+        scc_u = node_to_scc[u]
+        scc_v = node_to_scc[v]
+        if scc_u != scc_v and scc_v not in condensed_adj[scc_u]:
+            condensed_adj[scc_u].add(scc_v)
+            out_degree[scc_u] += 1
+            in_degree[scc_v] += 1
+
+    # แยกแยะ Source SCCs และ Sink SCCs (เกาะปิด)
+    sources = [i for i in range(1, num_sccs + 1) if in_degree[i] == 0]
+    sinks = [i for i in range(1, num_sccs + 1) if out_degree[i] == 0]
+
+    # -------------------------------------------------------------
+    # Step 3: วิเคราะห์การต่อถนนเพิ่มน้อยที่สุดเพื่อสร้าง 1 Component ใหญ่
+    # -------------------------------------------------------------
+    min_edges_to_add = max(len(sources), len(sinks))
+    print()
+    print("   วิเคราะห์กลุ่มปิด (Sink SCCs) และกลุ่มต้นทาง (Source SCCs)")
+    print(f"  • กลุ่มต้นทาง (Source SCCs - ไม่มีทางเข้า): {sources}")
+    print(f"  • กลุ่มปิด/ปลายทาง (Sink SCCs - ไม่มีทางออก): {sinks}")
+    
+    print("\n--------------------------------------------------")
+    print(f"  ★ จำนวนถนนที่น้อยที่สุดที่ต้องสร้างเพิ่ม: {min_edges_to_add} เส้น")
+    print("--------------------------------------------------")
+
+    print("\n[ข้อเสนอแนะเส้นทางถนนที่ควรสร้างเพิ่ม]:")
+    # ตัวอย่างแนวทางสร้างถนนเชื่อมจากเกาะปิดไปหาเกาะต้นทางเพื่อจับลูป
+    for k in range(min_edges_to_add):
+        from_sink_scc = sinks[k % len(sinks)]
+        to_source_scc = sources[k % len(sources)]
+        
+        # เลือกเกาะตัวแทน 1 เกาะจากกลุ่มปิด และ 1 เกาะจากกลุ่มต้นทาง
+        from_node = all_sccs[from_sink_scc - 1][0]
+        to_node = all_sccs[to_source_scc - 1][0]
+        
+        print(f"  เส้นที่ {k+1}: สร้างถนนจาก [เกาะ {from_node} (SCC_{from_sink_scc})] -> [เกาะ {to_node} (SCC_{to_source_scc})]")
 
 if __name__ == '__main__':
     solve()
