@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab 10 — ไล่โค้ด Q10.py ทีละบรรทัด</title>
+<style>
+  :root{
+    --bg:#0b0f15; --panel:#131923; --line:#242e3d; --line-soft:#1b2432;
+    --txt:#e6edf3; --dim:#8b98a9; --muted:#5f6b7a;
+    --blue:#58a6ff; --green:#3fb950; --gold:#d29922; --red:#f85149;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}
+  body{
+    background:
+      radial-gradient(900px 600px at 78% -8%, rgba(35,60,95,.45), transparent 60%),
+      radial-gradient(700px 500px at -10% 110%, rgba(30,50,70,.35), transparent 60%),
+      var(--bg);
+    color:var(--txt);
+    font-family:"Noto Sans Thai","Sarabun","Segoe UI",system-ui,-apple-system,sans-serif;
+    display:flex;flex-direction:column;height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- top bar ---------- */
+  #topbar{
+    flex:0 0 auto;display:flex;align-items:center;gap:12px;
+    padding:10px 20px;border-bottom:1px solid var(--line-soft);
+    background:rgba(11,15,21,.75);
+  }
+  .brand{display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+  .brand b{font-size:.92rem;letter-spacing:.06em;color:var(--blue)}
+  .brand span{font-size:.78rem;color:var(--dim)}
+  #linechip{
+    margin-left:auto;font-size:.72rem;font-weight:700;color:var(--dim);
+    background:#0f151e;border:1px solid var(--line);border-radius:99px;padding:3px 11px;
+    font-variant-numeric:tabular-nums;
+  }
+  #counter{font-size:.74rem;color:var(--muted);font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
+  #progress{flex:0 0 auto;height:2px;background:#1a2230}
+  #progressbar{height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .35s cubic-bezier(.22,1,.36,1)}
+
+  /* ---------- stage ---------- */
+  #stage{flex:1;min-height:0;padding:16px 22px 8px;display:flex}
+  .wrap{flex:1;display:grid;grid-template-columns:1.05fr .95fr;gap:14px;min-height:0}
+  .col{display:flex;flex-direction:column;gap:12px;min-height:0;justify-content:center}
+
+  /* ---------- cards ---------- */
+  .card{
+    background:linear-gradient(180deg,#141a24,#111720);
+    border:1px solid var(--line);border-radius:14px;
+    padding:16px 18px;box-shadow:0 12px 30px rgba(0,0,0,.22);min-height:0;
+  }
+  .hint{font-size:.75rem;color:var(--muted);line-height:1.5}
+  .hint b{color:var(--dim)}
+
+  /* ---------- code ---------- */
+  .codecard{padding:0;overflow:hidden;display:flex;flex-direction:column;flex:0 0 auto}
+  .cardhead{
+    flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 14px;
+    border-bottom:1px solid var(--line-soft);font-size:.72rem;color:var(--muted);
+    font-family:"SFMono-Regular",Menlo,monospace;
+  }
+  .cardhead .fname{color:var(--dim)}
+  .code{padding:10px 14px 12px;overflow:hidden;font-family:"SFMono-Regular",Menlo,Consolas,monospace;font-size:13px;line-height:1.72}
+  .lnrow{display:flex;border-radius:5px;transition:background .18s}
+  .lnrow .ln{flex:0 0 2.2ch;text-align:right;margin-right:1.1ch;color:#414d5c;user-select:none}
+  .lnrow .lt{white-space:pre;overflow:hidden;color:#c7d1dd}
+  .lnrow.mark{background:rgba(88,166,255,.13);box-shadow:inset 2px 0 0 var(--blue)}
+  .lnrow.mark .lt{color:#e9f2ff}
+  .tok-kw{color:#ff7b72}
+  .tok-fn{color:#d2a8ff}
+  .tok-num{color:#79c0ff}
+  .tok-str{color:#a5d6ff}
+
+  /* ---------- graph ---------- */
+  .graphcard{padding:8px;display:flex;align-items:center;justify-content:center}
+  .graphbox{width:100%;aspect-ratio:800/680;min-height:0}
+  .graphbox svg{width:100%;height:100%;display:block;overflow:visible}
+  .edge{stroke:#394352;stroke-width:1.8;fill:none;transition:stroke .35s,opacity .35s,stroke-width .35s}
+  .edge.tree{stroke:#2ea043}
+  .edge.hot{stroke:var(--gold);stroke-width:3.4}
+  .wlabel{fill:#93a1b1;font-size:12px;font-weight:700;paint-order:stroke;stroke:#0e131b;stroke-width:4px}
+  .node .disc{fill:#131923;stroke:#394352;stroke-width:2;transition:all .4s}
+  .node.vis .disc{fill:#0f2318;stroke:#2ea043}
+  .node.cur .disc{fill:#241f10;stroke:var(--gold);stroke-width:3}
+  .node.start .disc{fill:#101d2c;stroke:var(--blue);stroke-width:3}
+  .node.look .disc{stroke:var(--blue);stroke-width:3;stroke-dasharray:5 3}
+  .nlabel{fill:#e6edf3;font-size:14px;font-weight:800}
+  .dist{fill:var(--gold);font-size:12.5px;font-weight:800;paint-order:stroke;stroke:#0e131b;stroke-width:4px;opacity:0;transition:opacity .3s}
+  .dist.show{opacity:1}
+  .halo{fill:none;stroke:var(--gold);stroke-width:2.5;opacity:0;transform-box:fill-box;transform-origin:center}
+  .halo.go{animation:halo .8s ease-out}
+  @keyframes halo{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(2)}}
+
+  /* ---------- state panel ---------- */
+  .statecard{flex:0 0 auto;display:flex;flex-direction:column;gap:10px}
+  #status{font-size:.86rem;line-height:1.55;color:var(--dim)}
+  #status .big{font-weight:800;color:var(--txt)}
+  #status .up{color:var(--gold);font-weight:700}
+  .statefoot{display:flex;flex-direction:column;gap:9px}
+  .chips{display:flex;flex-wrap:wrap;gap:4px;padding-top:10px;border-top:1px dashed var(--line)}
+  .chip{font-size:.7rem;font-variant-numeric:tabular-nums;padding:2px 7px;border-radius:6px;background:#0f151e;border:1px solid var(--line);color:var(--muted)}
+  .chip b{color:#8fa0b4}
+  .chip.on{border-color:rgba(210,153,34,.45);color:var(--gold)}
+  .chip.on b{color:var(--gold)}
+  .footrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .mini{
+    font:inherit;font-size:.7rem;font-weight:700;color:var(--muted);
+    background:#0f151e;border:1px solid var(--line);border-radius:7px;
+    padding:4px 10px;cursor:pointer;transition:.2s;
+  }
+  .mini:hover{color:var(--txt);border-color:#3b4a5e}
+  .mini[hidden]{display:none}
+
+  /* ---------- bottom ---------- */
+  #bottom{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:8px 22px 12px}
+  .nav{display:flex;gap:9px}
+  .btn{
+    font-family:inherit;font-size:.85rem;font-weight:700;color:var(--txt);
+    background:#161d28;border:1px solid var(--line);border-radius:10px;
+    padding:8px 20px;cursor:pointer;transition:all .22s;
+  }
+  .btn:hover:not(:disabled){border-color:#3a4a5f;background:#1a2230;transform:translateY(-1px)}
+  .btn:disabled{opacity:.28;cursor:default}
+  #next{background:linear-gradient(180deg,#3f97f0,#2f7fd1);border-color:transparent;color:#04121f;min-width:196px}
+  #next:hover:not(:disabled){filter:brightness(1.1);background:linear-gradient(180deg,#4aa2ff,#3487db)}
+
+  @media (max-height:820px){
+    #stage{padding:10px 18px 6px}
+    .card{padding:12px 14px}
+    .codecard{padding:0}
+    .code{font-size:11.5px;line-height:1.6}
+    .graphcard{padding:6px}
+    #status{font-size:.8rem}
+  }
+</style>
+</head>
+<body>
+
+<header id="topbar">
+  <div class="brand"><b>LAB 10</b><span>Dijkstra · Q10.py</span></div>
+  <div id="linechip">ตั้งต้น</div>
+  <div id="counter">0 / 0</div>
+</header>
+<div id="progress"><div id="progressbar"></div></div>
+
+<main id="stage">
+  <div class="wrap">
+    <div class="card graphcard"><div class="graphbox" id="g"></div></div>
+    <div class="col">
+      <div class="card codecard" id="codecard">
+        <div class="cardhead"><span class="fname">Q10.py</span><span>·</span><span>บรรทัด 25-36</span></div>
+        <div class="code" id="code"></div>
+      </div>
+      <div class="card statecard">
+        <div id="status"></div>
+        <div class="statefoot">
+          <div class="chips" id="distRow"></div>
+          <div class="footrow">
+            <button class="mini" id="skip" type="button">จบรอบนี้ &#9197;</button>
+            <span class="hint" id="legend">เขียว = ปรับแล้ว · เหลือง = กำลังทำ · น้ำเงิน = กำลังตรวจ</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer id="bottom">
+  <span class="hint">กด <b>&#8594;</b> หรือ <b>Space</b> ไปต่อ · <b>&#8592;</b> ย้อนกลับ</span>
+  <div class="nav">
+    <button class="btn" id="back">&#8592; ย้อน</button>
+    <button class="btn" id="next">เริ่ม &#8594;</button>
+  </div>
+</footer>
+
+<script>
+/* =================================================================
+   Q10.py บรรทัด 25-36 — ไล่ทีละบรรทัด
+================================================================= */
+const N = 10;
+const EDGES = [
+  [1,2,1],[1,7,19],[1,9,13],[1,10,10],[2,3,4],[3,4,14],[3,6,4],
+  [4,5,16],[4,7,6],[6,5,14],[7,3,1],[8,4,15],[9,8,8],[10,9,8]
+];
+
+const EVENTS = [], FIN = Array(N+1).fill(Infinity);
+(function(){
+  FIN[1] = 0;
+  const pq = [[0,1]];
+  while(pq.length){
+    pq.sort((a,b)=>a[0]-b[0] || a[1]-b[1]);
+    const [d,u] = pq.shift();
+    EVENTS.push({line:30, u, d});
+    EVENTS.push({line:31, u, d, stale:d > FIN[u], du:FIN[u]});
+    if(d > FIN[u]){
+      EVENTS.push({line:32, u, d});
+      continue;
+    }
+    for(const [a,b,w] of EDGES){
+      if(a !== u) continue;
+      const sum = d + w, better = sum < FIN[b];
+      EVENTS.push({line:33, u, v:b, w});
+      EVENTS.push({line:34, u, v:b, w, d, sum, dv:FIN[b], better});
+      if(better){
+        const old = FIN[b];
+        FIN[b] = sum;
+        EVENTS.push({line:35, u, v:b, w, old, nw:sum});
+        pq.push([sum, b]);
+        EVENTS.push({line:36, u, v:b, nw:sum});
+      }
+    }
+  }
+  EVENTS.push({line:29, end:true});
+})();
+
+/* ---------- โค้ด + ไฮไลต์ ---------- */
+const CODE = [
+  [25, 'INF = float("inf")'],
+  [26, 'dist = [INF] * (n + 1)'],
+  [27, 'dist[1] = 0'],
+  [28, 'pq = [(0, 1)]'],
+  [29, 'while pq:'],
+  [30, '    d, u = heapq.heappop(pq)'],
+  [31, '    if d > dist[u]:'],
+  [32, '        continue'],
+  [33, '    for v, w in adj[u]:'],
+  [34, '        if d + w < dist[v]:'],
+  [35, '            dist[v] = d + w'],
+  [36, '            heapq.heappush(pq, (dist[v], v))']
+];
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+function hi(s){
+  return esc(s)
+    .replace(/"([^"]*)"/g, '<span class="tok-str">"$1"</span>')
+    .replace(/\b(while|if|for|in|continue)\b/g, '<span class="tok-kw">$1</span>')
+    .replace(/\b(\d+)\b/g, '<span class="tok-num">$1</span>')
+    .replace(/([\s(])([a-zA-Z_][\w.]*)\(/g, (m,p,f)=> p + '<span class="tok-fn">' + f + '</span>(');
+}
+document.getElementById("code").innerHTML = CODE.map(([n,t]) =>
+  `<div class="lnrow" data-line="${n}"><span class="ln">${n}</span><span class="lt">${hi(t)}</span></div>`
+).join("");
+
+/* ---------- กราฟ ---------- */
+const XY = {
+  1:[80,340], 2:[250,120], 10:[140,500], 9:[330,600], 7:[400,450],
+  3:[490,300], 6:[585,150], 4:[650,450], 5:[760,300], 8:[530,620]
+};
+const LABEL_T = {"1-9":0.30};
+const NS = "http://www.w3.org/2000/svg";
+
+function makeGraph(host){
+  host.innerHTML = `<svg viewBox="0 0 800 680" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto">
+        <path d="M1,1 L9,5 L1,9" fill="none" stroke="#394352" stroke-width="1.8"/>
+      </marker>
+      <marker id="mt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto">
+        <path d="M1,1 L9,5 L1,9" fill="none" stroke="#2ea043" stroke-width="1.8"/>
+      </marker>
+      <marker id="mh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto">
+        <path d="M1,1 L9,5 L1,9" fill="none" stroke="#d29922" stroke-width="2"/>
+      </marker>
+    </defs>
+    <g class="edges"></g><g class="nodes"></g>
+  </svg>`;
+  const svg = host.querySelector("svg");
+  const eg = svg.querySelector(".edges");
+  const ng = svg.querySelector(".nodes");
+
+  EDGES.forEach(([a,b,w], i) => {
+    const [x1,y1] = XY[a], [x2,y2] = XY[b];
+    const dx = x2-x1, dy = y2-y1, L = Math.hypot(dx,dy);
+    const ux = dx/L, uy = dy/L;
+
+    const line = document.createElementNS(NS, "line");
+    line.setAttribute("x1", x1 + ux*22);
+    line.setAttribute("y1", y1 + uy*22);
+    line.setAttribute("x2", x2 - ux*26);
+    line.setAttribute("y2", y2 - uy*26);
+    line.setAttribute("class", "edge");
+    line.setAttribute("data-k", a + "-" + b);
+    line.setAttribute("data-w", w);
+    line.setAttribute("marker-end", "url(#ma)");
+    line.style.transitionDelay = (i*12) + "ms";
+    eg.appendChild(line);
+
+    const t = LABEL_T[a + "-" + b] || 0.45;
+    const label = document.createElementNS(NS, "text");
+    label.setAttribute("x", x1 + dx*t + uy*13);
+    label.setAttribute("y", y1 + dy*t - ux*13);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("class", "wlabel");
+    label.textContent = w;
+    eg.appendChild(label);
+  });
+
+  for(let i=1;i<=N;i++){
+    const [x,y] = XY[i];
+    const g = document.createElementNS(NS, "g");
+    g.setAttribute("class", "node");
+    g.setAttribute("data-n", i);
+    g.innerHTML = `<circle class="halo" cx="${x}" cy="${y}" r="20"/>
+      <circle class="disc" cx="${x}" cy="${y}" r="20"/>
+      <text class="nlabel" x="${x}" y="${y+4.8}" text-anchor="middle">${i}</text>
+      <text class="dist" data-d="${i}" x="${x}" y="${y-29}" text-anchor="middle">∞</text>`;
+    ng.appendChild(g);
+  }
+  return svg;
+}
+const node = (svg,i) => svg.querySelector(`g.node[data-n="${i}"]`);
+const setNode = (svg,i,cls,on) => { const n = node(svg,i); if(n) n.classList.toggle(cls,on); };
+const setDist = (svg,i,v) => {
+  const t = svg.querySelector(`text.dist[data-d="${i}"]`);
+  if(t){ t.textContent = v === Infinity ? "∞" : v; t.classList.add("show"); }
+};
+function setEdge(svg,a,b,cls,on){
+  const e = svg.querySelector(`line.edge[data-k="${a}-${b}"]`);
+  if(!e) return;
+  e.classList.toggle(cls, on);
+  if(cls === "tree" && on) e.setAttribute("marker-end", "url(#mt)");
+  else if(cls === "hot" && on) e.setAttribute("marker-end", "url(#mh)");
+  else if(!e.classList.contains("tree") && !e.classList.contains("hot")) e.setAttribute("marker-end", "url(#ma)");
+}
+
+/* ---------- state ---------- */
+const fmt = v => v === Infinity ? "∞" : v;
+function stateAt(k){
+  const dist = Array(N+1).fill(Infinity); dist[1] = 0;
+  const done = new Set(), parent = {};
+  let cur = null, hot = null;
+  const upto = Math.max(0, Math.min(k, EVENTS.length));
+  for(let i=0;i<upto;i++){
+    const e = EVENTS[i];
+    if(e.line === 30){ cur = e.u; hot = null; }
+    else if(e.line === 29){ cur = null; hot = null; }
+    else if(e.line === 31 && !e.stale){ done.add(e.u); }
+    else if(e.line >= 33 && e.line <= 36){ hot = [e.u, e.v]; }
+    if(e.line === 35){ dist[e.v] = e.nw; parent[e.v] = e.u; }
+  }
+  return {dist, done, parent, cur, hot, last: upto ? EVENTS[upto-1] : null};
+}
+
+/* ---------- render ---------- */
+let step = 0;
+const $ = id => document.getElementById(id);
+const svg = makeGraph($("g"));
+
+function distChips(k){
+  const {dist} = stateAt(k);
+  let h = "";
+  for(let i=1;i<=N;i++){
+    h += `<span class="chip${dist[i] !== Infinity ? " on" : ""}"><b>${i}</b> = ${dist[i] === Infinity ? "∞" : dist[i]}</span>`;
+  }
+  return h;
+}
+function render(){
+  const S = stateAt(step);
+  const last = S.last;
+
+  /* code highlight */
+  const lines = step === 0 ? [26,27,28] : [last.line];
+  document.querySelectorAll(".lnrow").forEach(r => r.classList.toggle("mark", lines.includes(+r.dataset.line)));
+
+  /* graph */
+  svg.querySelectorAll("g.node").forEach(n => n.classList.remove("vis","cur","look"));
+  svg.querySelectorAll(".halo").forEach(h => h.classList.remove("go"));
+  svg.querySelectorAll("text.dist").forEach(t => { t.textContent = "∞"; t.classList.remove("show"); });
+  svg.querySelectorAll("line.edge").forEach(e => {
+    e.classList.remove("tree","hot");
+    e.setAttribute("marker-end", "url(#ma)");
+  });
+  setDist(svg, 1, 0);
+  setNode(svg, 1, "start", true);
+  if(step > 0){
+    for(let i=2;i<=N;i++) if(S.dist[i] !== Infinity) setDist(svg, i, S.dist[i]);
+    S.done.forEach(u => setNode(svg, u, "vis", true));
+    Object.keys(S.parent).forEach(v => {
+      setEdge(svg, S.parent[v], +v, "tree", true);
+      setNode(svg, +v, "vis", true);
+    });
+    if(S.cur){
+      setNode(svg, S.cur, "cur", true);
+      const n = node(svg, S.cur);
+      if(n) n.querySelector(".halo").classList.add("go");
+    }
+    if(S.hot){
+      setEdge(svg, S.hot[0], S.hot[1], "hot", true);
+      if(last && (last.line === 33 || last.line === 34)) setNode(svg, S.hot[1], "look", true);
+    }
+  }
+
+  /* status */
+  const st = $("status");
+  if(step === 0){
+    st.innerHTML = `<span class="big">ตั้งต้น:</span> dist[1] = 0 ที่เหลือยังไม่รู้ระยะ (∞)<br>
+      คิว pq = [(0, 1)] — หยิบค่าน้อยสุดก่อนเสมอ`;
+  } else {
+    let msg = "";
+    switch(last.line){
+      case 29: msg = `pq ว่างแล้ว — ได้ระยะสั้นสุดครบทุกประเทศ`; break;
+      case 30: msg = `หยิบ <b>(${last.d}, ${last.u})</b> ออกจาก pq — กำลังดูประเทศ <b>${last.u}</b> ที่ระยะ ${last.d}`; break;
+      case 31: msg = last.stale
+        ? `d = ${last.d} มากกว่า dist[${last.u}] = ${fmt(last.du)} → ค่าในคิวนี้เก่าแล้ว`
+        : `d = ${last.d} เท่ากับ dist[${last.u}] → ใช้ค่านี้ได้`; break;
+      case 32: msg = `ข้ามข้อมูลเก่าของประเทศ ${last.u} ด้วย <span class="up">continue</span>`; break;
+      case 33: msg = `ดูเพื่อนบ้านประเทศ <b>${last.v}</b> ของ ${last.u} (น้ำหนัก ${last.w})`; break;
+      case 34: msg = last.better
+        ? `${last.d} + ${last.w} = <b>${last.sum}</b> น้อยกว่า dist[${last.v}] = ${fmt(last.dv)} → ปรับได้`
+        : `${last.d} + ${last.w} = ${last.sum} ไม่น้อยกว่า dist[${last.v}] = ${fmt(last.dv)} → ไม่ปรับ`; break;
+      case 35: msg = `dist[${last.v}] = ${fmt(last.old)} → <span class="up">${last.nw}</span>`; break;
+      case 36: msg = `push <b>(${last.nw}, ${last.v})</b> เข้า pq เพื่อรอหยิบรอบหน้า`; break;
+    }
+    st.innerHTML = `<span class="big">บรรทัด ${last.line}:</span> ${msg}`;
+  }
+
+  /* chips + buttons */
+  $("distRow").innerHTML = distChips(step);
+  $("linechip").textContent = step === 0 ? "ตั้งต้น" : "บรรทัด " + last.line;
+  $("counter").textContent = step + " / " + EVENTS.length;
+  $("progressbar").style.width = (step / EVENTS.length * 100) + "%";
+  $("back").disabled = step === 0;
+  $("next").innerHTML = step < EVENTS.length
+    ? `บรรทัด ${EVENTS[step].line} &#9654;`
+    : `เริ่มใหม่ &#8634;`;
+
+  const skip = $("skip");
+  skip.hidden = !(last && last.line !== 29 && (!EVENTS[step] || EVENTS[step].line !== 30));
+}
+
+/* ---------- nav ---------- */
+function go(k){
+  step = Math.max(0, Math.min(k, EVENTS.length));
+  render();
+}
+$("next").addEventListener("click", () => go(step === EVENTS.length ? 0 : step + 1));
+$("back").addEventListener("click", () => go(step - 1));
+$("skip").addEventListener("click", () => {
+  let target = EVENTS.length;
+  for(let i=step+1; i<EVENTS.length; i++){
+    if(EVENTS[i].line === 30){ target = i; break; }
+  }
+  go(target);
+});
+document.addEventListener("keydown", e => {
+  if(e.key === "ArrowRight" || e.key === " "){ e.preventDefault(); go(step === EVENTS.length ? 0 : step + 1); }
+  else if(e.key === "ArrowLeft"){ e.preventDefault(); go(step - 1); }
+});
+
+render();
+</script>
+</body>
+</html>
